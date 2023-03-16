@@ -1,0 +1,24 @@
+- backend/
+  - node_modules/
+  - package.json
+  - index.js
+  - models/
+    - event.js
+    - user.js
+    - invitation.js
+    - comment.js
+    - category.js
+  - routes/
+    - index.js
+    - events.js
+    - users.js
+    - invitations.js
+    - comments.js
+    - categories.js
+  - controllers/
+    - index.js
+    - events.js
+    - users.js
+    - invitations.js
+    - comments.js
+    - categories.js
