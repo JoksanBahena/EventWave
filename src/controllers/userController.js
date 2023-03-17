@@ -1,75 +1,141 @@
 const User = require("../models/user");
+const bcrypt = require("bcrypt");
 
-async function getUsers(req, res) {
+exports.createUser = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+    res.status(201).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error creating user" });
+  }
+};
+
+exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
-    res.json(users);
+    res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
-async function getUserById(req, res, next) {
+exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (user == null) {
-      return res.status(404).json({ message: "Usuario no encontrado" });
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
-    res.user = user;
-    next();
+    res.status(200).json(user);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
-async function createUser(req, res) {
-  const user = new User({
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-    events: [],
-    invitations: [],
-    comments: [],
-  });
+exports.updateUser = async (req, res) => {
   try {
-    const newUser = await user.save();
-    res.status(201).json(newUser);
+    const { name, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        email,
+        password: hashedPassword,
+      },
+      { new: true }
+    ).populate("events");
+    res.json(user);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Error updating user" });
   }
-}
+};
 
-async function updateUser(req, res) {
-  if (req.body.name != null) {
-    res.user.name = req.body.name;
-  }
-  if (req.body.email != null) {
-    res.user.email = req.body.email;
-  }
-  if (req.body.password != null) {
-    res.user.password = req.body.password;
-  }
+exports.deleteUser = async (req, res) => {
   try {
-    const updatedUser = await res.user.save();
-    res.json(updatedUser);
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await user.deleteOne();
+    res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
-async function deleteUser(req, res) {
+exports.getUserByName = async (req, res) => {
   try {
-    await res.user.remove();
-    res.json({ message: "Usuario eliminado correctamente" });
+    const { name } = req.params;
+    const user = await User.findOne({ name }).select(
+      "name email events invitations comments"
+    );
+    console.log(name);
+    console.log(user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
-}
+};
 
-module.exports = {
-  getUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  getUserById,
+exports.getUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const user = await User.findOne({ email }).select(
+      "name email events invitations comments"
+    );
+    console.log(email);
+    console.log(user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// exports.deleteUserByEmail = async (req, res) => {
+//   try {
+//     const { email } = req.params;
+//     const user = await User.findOne({ email });
+//     console.log(email);
+//     console.log(user);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+//     res.json(user);
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({ error: "Something went wrong" });
+//   }
+// };
+
+exports.deleteUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const user = await User.findOneAndDelete({ email });
+    console.log(req.params.email);
+    console.log(user);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
 };

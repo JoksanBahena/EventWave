@@ -1,94 +1,188 @@
 const Event = require("../models/event");
 
-async function getEvents(req, res) {
+exports.createEvent = async (req, res) => {
   try {
-    const events = await Event.find();
-    res.json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-}
+    const event = new Event({
+      title: req.body.title,
+      description: req.body.description,
+      date: req.body.date,
+      location: req.body.location,
+      organizer: req.user.id,
+      category: req.body.category,
+    });
 
-async function getEventById(req, res, next) {
+    await event.save();
+
+    res.status(201).json({ message: "Event created successfully", event });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error creating event" });
+  }
+};
+
+exports.getEvents = async (req, res) => {
+  try {
+    const events = await Event.find().populate("category");
+
+    res.json({ events });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error getting events" });
+  }
+};
+
+exports.getEventById = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate("organizer", "name email")
+      .populate("category")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "author",
+          select: "name email",
+        },
+      });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.json({ event });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error getting event" });
+  }
+};
+
+exports.updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    if (event == null) {
-      return res.status(404).json({ message: "Evento no encontrado" });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
     }
-    res.event = event;
-    next();
+
+    if (event.organizer.toString() !== req.user.id) {
+      return res
+        .status(401)
+        .json({ message: "Not authorized to update event" });
+    }
+
+    event.title = req.body.title || event.title;
+    event.description = req.body.description || event.description;
+    event.date = req.body.date || event.date;
+    event.location = req.body.location || event.location;
+    event.category = req.body.category || event.category;
+
+    await event.save();
+
+    res.json({ message: "Event updated successfully", event });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Error updating event" });
   }
-}
+};
 
-async function createEvent(req, res) {
-  const event = new Event({
-    title: req.body.title,
-    description: req.body.description,
-    date: req.body.date,
-    location: req.body.location,
-    organizer: req.body.organizer,
-    attendees: req.body.attendees,
-    category: req.body.category,
-    comments: req.body.comments,
-  });
-
+exports.deleteEvent = async (req, res) => {
   try {
-    const newEvent = await event.save();
-    res.status(201).json(newEvent);
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.organizer.toString() !== req.user.id) {
+      return res
+        .status(401)
+        .json({ message: "Not authorized to delete event" });
+    }
+
+    await event.remove();
+
+    res.json({ message: "Event deleted successfully" });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Error deleting event" });
   }
-}
+};
 
-async function updateEvent(req, res) {
-  if (req.body.title != null) {
-    res.event.title = req.body.title;
-  }
-  if (req.body.description != null) {
-    res.event.description = req.body.description;
-  }
-  if (req.body.date != null) {
-    res.event.date = req.body.date;
-  }
-  if (req.body.location != null) {
-    res.event.location = req.body.location;
-  }
-  if (req.body.organizer != null) {
-    res.event.organizer = req.body.organizer;
-  }
-  if (req.body.attendees != null) {
-    res.event.attendees = req.body.attendees;
-  }
-  if (req.body.category != null) {
-    res.event.category = req.body.category;
-  }
-  if (req.body.comments != null) {
-    res.event.comments = req.body.comments;
-  }
-
+// Método para buscar eventos por nombre
+exports.searchByName = async (req, res, next) => {
   try {
-    const updatedEvent = await res.event.save();
-    res.json(updatedEvent);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+    const { name } = req.query;
+    const events = await Event.find(
+      { title: { $regex: name, $options: "i" } },
+      "title description date location organizer category comments"
+    )
+      .populate("organizer", "name")
+      .populate("category", "name");
+    res.status(200).json({ events });
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-async function deleteEvent(req, res) {
+// Método para buscar eventos por lugar
+exports.searchByLocation = async (req, res, next) => {
   try {
-    await res.event.remove();
-    res.json({ message: "Evento eliminado correctamente" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const { location } = req.query;
+    const events = await Event.find(
+      { location: { $regex: location, $options: "i" } },
+      "title description date location organizer category comments"
+    )
+      .populate("organizer", "name")
+      .populate("category", "name");
+    res.status(200).json({ events });
+  } catch (err) {
+    next(err);
   }
-}
+};
 
-module.exports = {
-  getEventById,
-  getEvents,
-  createEvent,
-  updateEvent,
-  deleteEvent,
+// Método para buscar eventos por categoría
+exports.searchByCategory = async (req, res, next) => {
+  try {
+    const { category } = req.query;
+    const events = await Event.find(
+      { category },
+      "title description date location organizer category comments"
+    )
+      .populate("organizer", "name")
+      .populate("category", "name");
+    res.status(200).json({ events });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Método para buscar eventos por fecha
+exports.searchByDate = async (req, res, next) => {
+  try {
+    const { date } = req.query;
+    const events = await Event.find(
+      { date },
+      "title description date location organizer category comments"
+    )
+      .populate("organizer", "name")
+      .populate("category", "name");
+    res.status(200).json({ events });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Método para buscar eventos por organizador
+exports.searchByOrganizer = async (req, res, next) => {
+  try {
+    const { organizer } = req.query;
+    const events = await Event.find(
+      { organizer },
+      "title description date location organizer category comments"
+    )
+      .populate("organizer", "name")
+      .populate("category", "name");
+    res.status(200).json({ events });
+  } catch (err) {
+    next(err);
+  }
 };
