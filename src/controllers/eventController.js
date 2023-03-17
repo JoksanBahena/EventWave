@@ -38,9 +38,9 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find().select(
-      "title description date location organizer category"
-    );
+    const events = await Event.find()
+      .select("title description date location category")
+      .populate("organizer", "name");
 
     res.json({ events });
   } catch (error) {
@@ -125,39 +125,38 @@ exports.deleteEvent = async (req, res) => {
   }
 };
 
-// Método para buscar eventos por nombre
-exports.searchByName = async (req, res, next) => {
+exports.getEventByName = async (req, res) => {
   try {
-    const { name } = req.query;
-    const events = await Event.find(
-      { title: { $regex: name, $options: "i" } },
-      "title description date location organizer category comments"
-    )
+    const { title } = req.params;
+
+    const event = await Event.find({ title })
+      .select("title description date location")
       .populate("organizer", "name")
+      .populate("attendees", "name")
       .populate("category", "name");
-    res.status(200).json({ events });
-  } catch (err) {
-    next(err);
+    // .populate("comments", "content author createdAt");
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.json(event);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Método para buscar eventos por lugar
-exports.searchByLocation = async (req, res, next) => {
+exports.getEventByLocation = async (req, res) => {
   try {
-    const { location } = req.query;
-    const events = await Event.find(
-      { location: { $regex: location, $options: "i" } },
-      "title description date location organizer category comments"
-    )
-      .populate("organizer", "name")
-      .populate("category", "name");
+    const { location } = req.params;
+    const events = await Event.find({ location }).populate("organizer", "name");
+
     res.status(200).json({ events });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Método para buscar eventos por categoría
 exports.searchByCategory = async (req, res, next) => {
   try {
     const { category } = req.query;
@@ -173,7 +172,6 @@ exports.searchByCategory = async (req, res, next) => {
   }
 };
 
-// Método para buscar eventos por fecha
 exports.searchByDate = async (req, res, next) => {
   try {
     const { date } = req.query;
@@ -189,7 +187,6 @@ exports.searchByDate = async (req, res, next) => {
   }
 };
 
-// Método para buscar eventos por organizador
 exports.searchByOrganizer = async (req, res, next) => {
   try {
     const { organizer } = req.query;

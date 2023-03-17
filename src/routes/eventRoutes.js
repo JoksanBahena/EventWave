@@ -8,8 +8,8 @@ router.post("/", eventController.createEvent);
 router.put("/:id", eventController.updateEvent);
 router.delete("/:id", eventController.deleteEvent);
 
-router.get("/name/:name", eventController.searchByName);
-router.get("/location/:location", eventController.searchByLocation);
+router.get("/title/:title", eventController.getEventByName);
+router.get("/location/:location", eventController.getEventByLocation);
 router.get("/category/:categoryId", eventController.searchByCategory);
 router.get("/date/:date", eventController.searchByDate);
 router.get("/organizer/:organizerId", eventController.searchByOrganizer);

@@ -1,5 +1,4 @@
 const User = require("../models/user");
-const Event = require("../models/event");
 const bcrypt = require("bcrypt");
 
 exports.createUser = async (req, res) => {
@@ -20,9 +19,10 @@ exports.createUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select(
-      "name email events invitations comments"
-    );
+    const users = await User.find()
+      .select("name email invitations comments")
+      .populate("events", "title");
+
     res.status(200).json(users);
   } catch (error) {
     console.log(error);
@@ -85,8 +85,6 @@ exports.getUserByName = async (req, res) => {
       .select("name email invitations comments")
       .populate("events", "title");
 
-    console.log(name);
-    console.log(user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -105,8 +103,6 @@ exports.getUserByEmail = async (req, res) => {
       .select("name email invitations comments")
       .populate("events", "title");
 
-    console.log(email);
-    console.log(user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
