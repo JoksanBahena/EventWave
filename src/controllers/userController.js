@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const Event = require("../models/event");
 const bcrypt = require("bcrypt");
 
 exports.createUser = async (req, res) => {
@@ -19,7 +20,9 @@ exports.createUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select(
+      "name email events invitations comments"
+    );
     res.status(200).json(users);
   } catch (error) {
     console.log(error);
@@ -77,14 +80,17 @@ exports.deleteUser = async (req, res) => {
 exports.getUserByName = async (req, res) => {
   try {
     const { name } = req.params;
-    const user = await User.findOne({ name }).select(
-      "name email events invitations comments"
-    );
+
+    const user = await User.findOne({ name })
+      .select("name email invitations comments")
+      .populate("events", "title");
+
     console.log(name);
     console.log(user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -94,14 +100,17 @@ exports.getUserByName = async (req, res) => {
 exports.getUserByEmail = async (req, res) => {
   try {
     const { email } = req.params;
-    const user = await User.findOne({ email }).select(
-      "name email events invitations comments"
-    );
+
+    const user = await User.findOne({ email })
+      .select("name email invitations comments")
+      .populate("events", "title");
+
     console.log(email);
     console.log(user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -1,17 +1,33 @@
 const Event = require("../models/event");
+const User = require("../models/user");
 
 exports.createEvent = async (req, res) => {
   try {
-    const event = new Event({
-      title: req.body.title,
-      description: req.body.description,
-      date: req.body.date,
-      location: req.body.location,
-      organizer: req.user.id,
-      category: req.body.category,
+    const {
+      title,
+      description,
+      date,
+      location,
+      organizer,
+      attendees,
+      category,
+      comments,
+    } = req.body;
+
+    const event = await Event.create({
+      title,
+      description,
+      date,
+      location,
+      organizer,
+      attendees,
+      category,
+      comments,
     });
 
-    await event.save();
+    const user = await User.findById(organizer);
+    user.events.push(event);
+    await user.save();
 
     res.status(201).json({ message: "Event created successfully", event });
   } catch (error) {
@@ -22,7 +38,9 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find().populate("category");
+    const events = await Event.find().select(
+      "title description date location organizer category"
+    );
 
     res.json({ events });
   } catch (error) {
