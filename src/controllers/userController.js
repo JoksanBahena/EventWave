@@ -1,5 +1,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 exports.createUser = async (req, res) => {
   try {
@@ -77,6 +79,31 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+exports.loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "User or Password incorrect" });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error logging in user" });
+  }
+};
+
 exports.getUserByName = async (req, res) => {
   try {
     const { name } = req.params;
@@ -113,32 +140,47 @@ exports.getUserByEmail = async (req, res) => {
   }
 };
 
-// exports.deleteUserByEmail = async (req, res) => {
-//   try {
-//     const { email } = req.params;
-//     const user = await User.findOne({ email });
-//     console.log(email);
-//     console.log(user);
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-//     res.json(user);
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).json({ error: "Something went wrong" });
-//   }
-// };
+exports.updateUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { name, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.findOneAndUpdate(
+      { email },
+      { name, password: hashedPassword },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
 
 exports.deleteUserByEmail = async (req, res) => {
   try {
     const { email } = req.params;
-    const user = await User.findOneAndDelete({ email });
-    console.log(req.params.email);
-    console.log(user);
+    const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+
+    } else if (user.events.length > 0) {
+      res.status(500).json({
+        error: "User has events, please delete them first",
+      });
+
+    } else {
+      await user.deleteOne();
+      res.status(200).json({ message: "User deleted successfully" });
     }
-    res.status(200).json({ message: "User deleted successfully" });
+
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Something went wrong" });

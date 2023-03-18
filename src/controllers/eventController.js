@@ -1,5 +1,6 @@
 const Event = require("../models/event");
 const User = require("../models/user");
+const jwt = require("jsonwebtoken");
 
 exports.createEvent = async (req, res) => {
   try {
@@ -8,18 +9,30 @@ exports.createEvent = async (req, res) => {
       description,
       date,
       location,
-      organizer,
+      organizerNameOrEmail,
       attendees,
       category,
       comments,
     } = req.body;
+
+    let organizer;
+
+    organizer = await User.findOne({ name: organizerNameOrEmail });
+
+    if (!organizer) {
+      organizer = await User.findOne({ email: organizerNameOrEmail });
+    }
+
+    if (!organizer) {
+      return res.status(404).json({ message: "Organizer not found" });
+    }
 
     const event = await Event.create({
       title,
       description,
       date,
       location,
-      organizer,
+      organizer: organizer._id,
       attendees,
       category,
       comments,
@@ -199,5 +212,39 @@ exports.searchByOrganizer = async (req, res, next) => {
     res.status(200).json({ events });
   } catch (err) {
     next(err);
+  }
+};
+
+exports.updateEventByNameAndToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, "secret");
+    const userId = decodedToken.id;
+
+    const { title } = req.params;
+    const event = await Event.findOne({ title });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.organizer.toString() !== userId) {
+      return res
+        .status(401)
+        .json({ message: "Not authorized to update event" });
+    }
+
+    event.title = req.body.title || event.title;
+    event.description = req.body.description || event.description;
+    event.date = req.body.date || event.date;
+    event.location = req.body.location || event.location;
+    event.category = req.body.category || event.category;
+
+    await event.save();
+
+    res.json({ message: "Event updated successfully", event });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating event" });
   }
 };

@@ -13,5 +13,6 @@ router.get("/location/:location", eventController.getEventByLocation);
 router.get("/category/:categoryId", eventController.searchByCategory);
 router.get("/date/:date", eventController.searchByDate);
 router.get("/organizer/:organizerId", eventController.searchByOrganizer);
+router.put("/update/:title", eventController.updateEventByNameAndToken);
 
 module.exports = router;
