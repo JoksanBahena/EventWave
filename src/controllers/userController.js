@@ -7,12 +7,14 @@ exports.createUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
     });
-    res.status(201).json(user);
+
+    res.status(201).json({ message: "User created successfully", user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error creating user" });
@@ -26,53 +28,6 @@ exports.getAllUsers = async (req, res) => {
       .populate("events", "title");
 
     res.status(200).json(users);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
-exports.getUserById = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
-exports.updateUser = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      {
-        name,
-        email,
-        password: hashedPassword,
-      },
-      { new: true }
-    ).populate("events");
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error updating user" });
-  }
-};
-
-exports.deleteUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    await user.deleteOne();
-    res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Something went wrong" });
@@ -140,47 +95,56 @@ exports.getUserByEmail = async (req, res) => {
   }
 };
 
-exports.updateUserByEmail = async (req, res) => {
+exports.updateUserByEmailAndToken = async (req, res) => {
   try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = await User.findById(decoded.id);
+
     const { email } = req.params;
     const { name, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.findOneAndUpdate(
-      { email },
-      { name, password: hashedPassword },
-      { new: true }
-    );
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+    } else if (userId._id.toString() !== user._id.toString()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    } else {
+      user.name = name;
+      user.password = hashedPassword;
+      await user.save();
     }
 
-    res.status(200).json(user);
+    res.status(200).json({ message: "User updated successfully", user });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Something went wrong" });
   }
 };
 
-exports.deleteUserByEmail = async (req, res) => {
+exports.deleteUserByEmailAndToken = async (req, res) => {
   try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = await User.findById(decoded.id);
+
     const { email } = req.params;
     const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
-
+    } else if (userId._id.toString() !== user._id.toString()) {
+      return res.status(401).json({ error: "Unauthorized" });
     } else if (user.events.length > 0) {
       res.status(500).json({
-        error: "User has events, please delete them first",
+        error: "You have events, please delete them first",
       });
-
     } else {
       await user.deleteOne();
       res.status(200).json({ message: "User deleted successfully" });
     }
-
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Something went wrong" });

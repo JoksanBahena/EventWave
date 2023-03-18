@@ -8,15 +8,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 const eventsRoutes = require("./src/routes/eventRoutes");
-const usersRoutes = require('./src/routes/userRoutes');
-// const invitationsRoutes = require('./routes/invitationsRoutes');
-// const commentsRoutes = require('./routes/commentsRoutes');
-// const categoriesRoutes = require('./routes/categoriesRoutes');
+const usersRoutes = require("./src/routes/userRoutes");
+const categoriesRoutes = require("./src/routes/categoryRoutes");
+
 app.use("/api/events", eventsRoutes);
-app.use('/api/users', usersRoutes);
-// app.use('/api/invitations', invitationsRoutes);
-// app.use('/api/comments', commentsRoutes);
-// app.use('/api/categories', categoriesRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/categories", categoriesRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
