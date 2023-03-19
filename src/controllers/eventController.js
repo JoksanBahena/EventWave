@@ -2,9 +2,14 @@ const Event = require("../models/event");
 const User = require("../models/user");
 const Category = require("../models/category");
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 exports.createEvent = async (req, res) => {
   try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decodedToken.id;
+
     const {
       title,
       description,
@@ -23,13 +28,16 @@ exports.createEvent = async (req, res) => {
     }
 
     let organizer;
-    organizer = await User.findOne({ name: organizerNameOrEmail });
+    organizer = await User.findOne({
+      $or: [{ name: organizerNameOrEmail }, { email: organizerNameOrEmail }],
+    });
 
     if (!organizer) {
-      organizer = await User.findOne({ email: organizerNameOrEmail });
-    }
-    if (!organizer) {
       return res.status(404).json({ message: "Organizer not found" });
+    }
+
+    if (organizer._id != userId) {
+      return res.status(401).json({ message: "Unauthorized to created event" });
     }
 
     let categoryEvent;
@@ -68,8 +76,17 @@ exports.createEvent = async (req, res) => {
 exports.getEvents = async (req, res) => {
   try {
     const events = await Event.find()
+      .select("title description date location organizer category")
       .populate("organizer", "name email")
       .populate("category", "name");
+    // .populate({
+    //   path: "attendees",
+    //   select: "invitee status message",
+    //   populate: {
+    //     path: "invitee",
+    //     select: "name email",
+    //   },
+    // });
 
     res.json({ events });
   } catch (error) {
@@ -84,7 +101,15 @@ exports.getEventByName = async (req, res) => {
 
     const event = await Event.find({ title })
       .populate("organizer", "name email")
-      .populate("category", "name");
+      .populate("category", "name")
+      .populate({
+        path: "attendees",
+        select: "invitee status message",
+        populate: {
+          path: "invitee",
+          select: "name email",
+        },
+      });
 
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -101,7 +126,15 @@ exports.getEventByLocation = async (req, res) => {
     const { location } = req.params;
     const events = await Event.find({ location })
       .populate("organizer", "name")
-      .populate("category", "name");
+      .populate("category", "name")
+      .populate({
+        path: "attendees",
+        select: "invitee status message",
+        populate: {
+          path: "invitee",
+          select: "name email",
+        },
+      });
 
     res.status(200).json({ events });
   } catch (error) {
@@ -117,7 +150,15 @@ exports.getEventByCategory = async (req, res) => {
 
     const events = await Event.find({ category: categoryId._id })
       .populate("organizer", "name email")
-      .populate("category", "name");
+      .populate("category", "name")
+      .populate({
+        path: "attendees",
+        select: "invitee status message",
+        populate: {
+          path: "invitee",
+          select: "name email",
+        },
+      });
 
     res.status(200).json({ events });
   } catch (err) {
@@ -134,7 +175,17 @@ exports.getEventByDate = async (req, res) => {
         $gte: new Date(date),
         $lt: new Date(date).setDate(new Date(date).getDate() + 1),
       },
-    }).populate("organizer", "name email");
+    })
+      .populate("organizer", "name email")
+      .populate("category", "name")
+      .populate({
+        path: "attendees",
+        select: "invitee status message",
+        populate: {
+          path: "invitee",
+          select: "name email",
+        },
+      });
 
     if (!events) {
       return res.status(404).json({ message: "Event not found" });
@@ -155,10 +206,17 @@ exports.getEventByOrganizer = async (req, res) => {
 
     const userId = user._id;
 
-    const events = await Event.find({ organizer: userId }).populate(
-      "organizer",
-      "name email"
-    );
+    const events = await Event.find({ organizer: userId })
+      .populate("organizer", "name email")
+      .populate("category", "name")
+      .populate({
+        path: "attendees",
+        select: "invitee status message",
+        populate: {
+          path: "invitee",
+          select: "name email",
+        },
+      });
 
     res.status(200).json({ events });
   } catch (err) {

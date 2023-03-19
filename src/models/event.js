@@ -10,7 +10,7 @@ const eventSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: "Invitation" }],
   category: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
   comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
 });

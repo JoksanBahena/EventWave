@@ -8,6 +8,12 @@ exports.createUser = async (req, res) => {
     const { name, email, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const checkUser = await User.findOne({ email });
+
+    if (checkUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
     const user = await User.create({
       name,
       email,
@@ -25,7 +31,15 @@ exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("name email invitations comments")
-      .populate("events", "title");
+      .populate("events", "title")
+      .populate({
+        path: "invitations",
+        select: "event status message",
+        populate: {
+          path: "event",
+          select: "title",
+        },
+      });
 
     res.status(200).json(users);
   } catch (error) {
