@@ -4,7 +4,7 @@ const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-exports.createInvitation = async (req, res) => {
+exports.createInvitationAndToken = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
@@ -16,34 +16,44 @@ exports.createInvitation = async (req, res) => {
     let invitee;
 
     event = await Event.findOne({ title: eventName });
-    
+
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
     invitee = await User.findOne({
-      $or: [
-        { name: inviteeNameOrEmail },
-        { email: inviteeNameOrEmail }
-      ]
+      $or: [{ name: inviteeNameOrEmail }, { email: inviteeNameOrEmail }],
     });
 
     if (!invitee) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const checkInvitation = await Invitation.findOne({ invitee: invitee._id, event: event._id });
+    const checkInvitation = await Invitation.findOne({
+      invitee: invitee._id,
+      event: event._id,
+    });
 
     if (checkInvitation) {
-      return res.status(400).json({ message: "You have invitation for this event" });
+      return res
+        .status(400)
+        .json({ message: "You have invitation for this event" });
     }
 
     if (event.organizer == userId) {
-      return res.status(401).json({ message: "You are the creator of the event, you enter for free" });
+      return res
+        .status(401)
+        .json({
+          message: "You are the creator of the event, you enter for free",
+        });
     }
-    
+
     if (invitee._id != userId) {
-      return res.status(401).json({ message: "Unauthorized to create invitation for another user" });
+      return res
+        .status(401)
+        .json({
+          message: "Unauthorized to create invitation for another user",
+        });
     }
 
     const invitation = await Invitation.create({
@@ -70,10 +80,50 @@ exports.createInvitation = async (req, res) => {
 exports.getInvitations = async (req, res) => {
   try {
     const invitations = await Invitation.find()
-    .populate("event", "title").populate("invitee", "name");
+      .populate("event", "title")
+      .populate("invitee", "name");
 
     res.status(200).json({ invitations });
   } catch (err) {
     res.status(500).json({ message: "Not found invitations" });
+  }
+};
+
+exports.updateInvitationAndToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decodedToken.id;
+
+    const { inviteeNameOrEmail } = req.params;
+    const { status, message } = req.body;
+
+    const user = await User.findOne({
+      $or: [{ name: inviteeNameOrEmail }, { email: inviteeNameOrEmail }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const invitation = await Invitation.findOne({ invitee: user._id });
+
+    if (!invitation) {
+      return res.status(404).json({ message: "Invitation not found" });
+    }
+
+    if (invitation.invitee != userId) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized to update invitation" });
+    }
+
+    invitation.status = status;
+    invitation.message = message;
+    await invitation.save();
+
+    res.status(200).json({ message: "Invitation updated successfully", invitation });
+  } catch (err) {
+    res.status(500).json({ message: "Not updated invitation" });
   }
 };

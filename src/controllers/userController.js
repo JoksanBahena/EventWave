@@ -30,16 +30,16 @@ exports.createUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email invitations comments")
+      .select("name email")
       .populate("events", "title")
-      .populate({
-        path: "invitations",
-        select: "event status message",
-        populate: {
-          path: "event",
-          select: "title",
-        },
-      });
+      // .populate({
+      //   path: "invitations",
+      //   select: "event status message",
+      //   populate: {
+      //     path: "event",
+      //     select: "title",
+      //   },
+      // });
 
     res.status(200).json(users);
   } catch (error) {
@@ -78,8 +78,16 @@ exports.getUserByName = async (req, res) => {
     const { name } = req.params;
 
     const user = await User.findOne({ name })
-      .select("name email invitations comments")
-      .populate("events", "title");
+      .select("name email")
+      .populate("events", "title")
+      .populate({
+        path: "invitations",
+        select: "event status message",
+        populate: {
+          path: "event",
+          select: "title",
+        },
+      });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -96,8 +104,16 @@ exports.getUserByEmail = async (req, res) => {
     const { email } = req.params;
 
     const user = await User.findOne({ email })
-      .select("name email invitations comments")
-      .populate("events", "title");
+      .select("name email")
+      .populate("events", "title")
+      .populate({
+        path: "invitations",
+        select: "event status message",
+        populate: {
+          path: "event",
+          select: "title",
+        },
+      });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

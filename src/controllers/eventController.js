@@ -4,7 +4,7 @@ const Category = require("../models/category");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-exports.createEvent = async (req, res) => {
+exports.createEventAndToken = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);

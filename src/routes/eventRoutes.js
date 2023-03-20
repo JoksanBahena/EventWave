@@ -3,7 +3,7 @@ const router = express.Router();
 const eventController = require("../controllers/eventController");
 
 router.get("/", eventController.getEvents);
-router.post("/", eventController.createEvent);
+router.post("/", eventController.createEventAndToken);
 
 router.get("/title/:title", eventController.getEventByName);
 router.get("/location/:location", eventController.getEventByLocation);
