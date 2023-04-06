@@ -30,16 +30,8 @@ exports.createUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email")
-      .populate("events", "title")
-      // .populate({
-      //   path: "invitations",
-      //   select: "event status message",
-      //   populate: {
-      //     path: "event",
-      //     select: "title",
-      //   },
-      // });
+      .select("-_id name email")
+      .populate("events", "-_id title");
 
     res.status(200).json(users);
   } catch (error) {
@@ -106,14 +98,22 @@ exports.getUserByName = async (req, res) => {
     const { name } = req.params;
 
     const user = await User.findOne({ name })
-      .select("name email")
-      .populate("events", "title")
+      .select("-_id name email")
+      .populate("events", "-_id title")
       .populate({
         path: "invitations",
-        select: "event status message",
+        select: "-_id event status message",
         populate: {
           path: "event",
-          select: "title",
+          select: "-_id title",
+        },
+      })
+      .populate({
+        path: "comments",
+        select: "-_id event content",
+        populate: {
+          path: "event",
+          select: "-_id title",
         },
       });
 
@@ -132,16 +132,24 @@ exports.getUserByEmail = async (req, res) => {
     const { email } = req.params;
 
     const user = await User.findOne({ email })
-      .select("name email")
-      .populate("events", "title")
-      .populate({
-        path: "invitations",
-        select: "event status message",
-        populate: {
-          path: "event",
-          select: "title",
-        },
-      });
+    .select("-_id name email")
+    .populate("events", "-_id title")
+    .populate({
+      path: "invitations",
+      select: "-_id event status message",
+      populate: {
+        path: "event",
+        select: "-_id title",
+      },
+    })
+    .populate({
+      path: "comments",
+      select: "-_id event content",
+      populate: {
+        path: "event",
+        select: "-_id title",
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

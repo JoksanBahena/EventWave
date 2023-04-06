@@ -41,19 +41,15 @@ exports.createInvitationAndToken = async (req, res) => {
     }
 
     if (event.organizer == userId) {
-      return res
-        .status(401)
-        .json({
-          message: "You are the creator of the event, you enter for free",
-        });
+      return res.status(401).json({
+        message: "You are the creator of the event, you enter for free",
+      });
     }
 
     if (invitee._id != userId) {
-      return res
-        .status(401)
-        .json({
-          message: "Unauthorized to create invitation for another user",
-        });
+      return res.status(401).json({
+        message: "Unauthorized to create invitation for another user",
+      });
     }
 
     const invitation = await Invitation.create({
@@ -80,8 +76,9 @@ exports.createInvitationAndToken = async (req, res) => {
 exports.getInvitations = async (req, res) => {
   try {
     const invitations = await Invitation.find()
-      .populate("event", "title")
-      .populate("invitee", "name");
+      .select("-_id -__v")
+      .populate("event", "-_id title")
+      .populate("invitee", "-_id name");
 
     res.status(200).json({ invitations });
   } catch (err) {
@@ -122,7 +119,9 @@ exports.updateInvitationAndToken = async (req, res) => {
     invitation.message = message;
     await invitation.save();
 
-    res.status(200).json({ message: "Invitation updated successfully", invitation });
+    res
+      .status(200)
+      .json({ message: "Invitation updated successfully", invitation });
   } catch (err) {
     res.status(500).json({ message: "Not updated invitation" });
   }
