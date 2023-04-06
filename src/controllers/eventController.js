@@ -167,23 +167,27 @@ exports.getEventByCategory = async (req, res) => {
 };
 
 exports.getEventByDate = async (req, res) => {
-  const { date } = req.params;
-
   try {
-    const events = await Event.find({
-      date: {
-        $gte: new Date(date),
-        $lt: new Date(date).setDate(new Date(date).getDate() + 1),
-      },
-    })
-      .populate("organizer", "name email")
-      .populate("category", "name")
+    const { date } = req.params;
+
+    const events = await Event.find({ date })
+      .select("-_id -__v")
+      .populate("organizer", "-_id name email")
+      .populate("category", "-_id name")
       .populate({
         path: "attendees",
         select: "invitee status message",
         populate: {
           path: "invitee",
-          select: "name email",
+          select: "-_id name email",
+        },
+      })
+      .populate({
+        path: "comments",
+        select: "-_id content author",
+        populate: {
+          path: "author",
+          select: "-_id name email",
         },
       });
 

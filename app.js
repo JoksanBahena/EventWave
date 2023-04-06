@@ -11,11 +11,13 @@ const eventsRoutes = require("./src/routes/eventRoutes");
 const usersRoutes = require("./src/routes/userRoutes");
 const categoriesRoutes = require("./src/routes/categoryRoutes");
 const invitationsRoutes = require("./src/routes/invitationRoutes");
+const commentsRoutes = require("./src/routes/commentRoutes");
 
 app.use("/api/events", eventsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/invitations", invitationsRoutes);
+app.use("/api/comments", commentsRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
