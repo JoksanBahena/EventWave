@@ -331,6 +331,20 @@ exports.deleteEventByNameAndToken = async (req, res) => {
         .json({ message: "Not authorized to delete event" });
     }
 
+    deleteEventInUser = await User.findOneAndUpdate(
+      { _id: event.organizer },
+      {
+        $pull: { events: event._id },
+      }
+    );
+
+    deleteEventInCategory = await Category.findOneAndUpdate(
+      { _id: event.category },
+      {
+        $pull: { events: event._id },
+      }
+    );
+
     await event.deleteOne();
     res.json({ message: "Event deleted successfully" });
   } catch (error) {

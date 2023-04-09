@@ -221,12 +221,12 @@ exports.deleteCommentAndToken = async (req, res) => {
       });
     }
 
-    beforeAuthor = await User.findOneAndUpdate(
+    deleteCommentInUser = await User.findOneAndUpdate(
       { _id: comment.author._id },
       { $pull: { comments: comment._id } }
     );
 
-    beforeEvent = await Event.findOneAndUpdate(
+    deleteCommentInEvent = await Event.findOneAndUpdate(
       { _id: comment.event._id },
       { $pull: { comments: comment._id } }
     );

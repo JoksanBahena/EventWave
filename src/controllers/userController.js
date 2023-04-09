@@ -208,6 +208,16 @@ exports.deleteUserByEmailAndToken = async (req, res) => {
         error: "You have events, please delete them first",
       });
     } else {
+      deleteInvitationsInEvents = await Event.updateMany(
+        { attendees: { $in: user.invitations } },
+        { $pull: { attendees: { $in: user.invitations } } }
+      );
+
+      deleteCommentsInEvents = await Event.updateMany(
+        { comments: { $in: user.comments } },
+        { $pull: { comments: { $in: user.comments } } }
+      );
+
       await user.deleteOne();
       res.status(200).json({ message: "User deleted successfully" });
     }
