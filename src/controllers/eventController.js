@@ -1,6 +1,8 @@
 const Event = require("../models/event");
 const User = require("../models/user");
 const Category = require("../models/category");
+const Invitation = require("../models/invitation");
+const Comment = require("../models/comment");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
@@ -151,25 +153,25 @@ exports.getEventByCategory = async (req, res) => {
     const categoryId = await Category.findOne({ name: category });
 
     const events = await Event.find({ category: categoryId._id })
-    .select("-_id -__v")
-    .populate("organizer", "-_id name email")
-    .populate("category", "-_id name")
-    .populate({
-      path: "attendees",
-      select: "-_id invitee status message",
-      populate: {
-        path: "invitee",
-        select: "-_id name email",
-      },
-    })
-    .populate({
-      path: "comments",
-      select: "-_id content author",
-      populate: {
-        path: "author",
-        select: "-_id name email",
-      },
-    });
+      .select("-_id -__v")
+      .populate("organizer", "-_id name email")
+      .populate("category", "-_id name")
+      .populate({
+        path: "attendees",
+        select: "-_id invitee status message",
+        populate: {
+          path: "invitee",
+          select: "-_id name email",
+        },
+      })
+      .populate({
+        path: "comments",
+        select: "-_id content author",
+        populate: {
+          path: "author",
+          select: "-_id name email",
+        },
+      });
 
     res.status(200).json({ events });
   } catch (err) {
@@ -218,25 +220,25 @@ exports.getEventByOrganizer = async (req, res) => {
     const userId = user._id;
 
     const events = await Event.find({ organizer: userId })
-    .select("-_id -__v")
-    .populate("organizer", "-_id name email")
-    .populate("category", "-_id name")
-    .populate({
-      path: "attendees",
-      select: "-_id invitee status message",
-      populate: {
-        path: "invitee",
-        select: "-_id name email",
-      },
-    })
-    .populate({
-      path: "comments",
-      select: "-_id content author",
-      populate: {
-        path: "author",
-        select: "-_id name email",
-      },
-    });
+      .select("-_id -__v")
+      .populate("organizer", "-_id name email")
+      .populate("category", "-_id name")
+      .populate({
+        path: "attendees",
+        select: "-_id invitee status message",
+        populate: {
+          path: "invitee",
+          select: "-_id name email",
+        },
+      })
+      .populate({
+        path: "comments",
+        select: "-_id content author",
+        populate: {
+          path: "author",
+          select: "-_id name email",
+        },
+      });
 
     res.status(200).json({ events });
   } catch (err) {
@@ -340,6 +342,28 @@ exports.deleteEventByNameAndToken = async (req, res) => {
         $pull: { events: event._id },
       }
     );
+
+    deleteInvitationsInUser = await User.updateMany(
+      { invitations: { $in: event.attendees } },
+      {
+        $pull: { invitations: { $in: event.attendees } },
+      }
+    );
+
+    deleteComments = await User.updateMany(
+      { comments: { $in: event.comments } },
+      {
+        $pull: { comments: { $in: event.comments } },
+      }
+    );
+
+    deleteInvitations = await Invitation.deleteMany({
+      event: event._id,
+    });
+
+    deleteComments = await Comment.deleteMany({
+      event: event._id,
+    });
 
     await event.deleteOne();
     res.json({ message: "Event deleted successfully" });
