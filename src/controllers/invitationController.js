@@ -10,7 +10,7 @@ exports.createInvitationAndToken = async (req, res) => {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decodedToken.id;
 
-    const { eventName, inviteeNameOrEmail, status, message } = req.body;
+    const { eventName, inviteeNameOrEmail, message } = req.body;
 
     let event;
     let invitee;
@@ -37,25 +37,24 @@ exports.createInvitationAndToken = async (req, res) => {
     if (checkInvitation) {
       return res
         .status(400)
-        .json({ message: "You have invitation for this event" });
+        .json({ message: "The user already has an invitation" });
     }
 
-    if (event.organizer == userId) {
-      return res.status(401).json({
-        message: "You are the creator of the event, you enter for free",
-      });
+    if (invitee._id == userId) {
+      return res
+        .status(401)
+        .json({ message: "You can not invite yourself to the event" });
     }
 
-    if (invitee._id != userId) {
-      return res.status(401).json({
-        message: "Unauthorized to create invitation for another user",
-      });
+    if (event.organizer != userId) {
+      return res
+        .status(401)
+        .json({ message: "Not authorized to send invitations, you are not the organizer of the event" });
     }
 
     const invitation = await Invitation.create({
       event: event._id,
       invitee: invitee._id,
-      status,
       message,
     });
 
@@ -93,7 +92,7 @@ exports.updateInvitationAndToken = async (req, res) => {
     const userId = decodedToken.id;
 
     const { inviteeNameOrEmail } = req.params;
-    const { status, message } = req.body;
+    const { status } = req.body;
 
     const user = await User.findOne({
       $or: [{ name: inviteeNameOrEmail }, { email: inviteeNameOrEmail }],
@@ -116,7 +115,6 @@ exports.updateInvitationAndToken = async (req, res) => {
     }
 
     invitation.status = status;
-    invitation.message = message;
     await invitation.save();
 
     res

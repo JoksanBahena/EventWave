@@ -16,9 +16,7 @@ exports.createEventAndToken = async (req, res) => {
       date,
       location,
       organizerNameOrEmail,
-      attendees,
       categoryName,
-      comments,
     } = req.body;
 
     const checkEvent = await Event.findOne({ title });
@@ -53,9 +51,7 @@ exports.createEventAndToken = async (req, res) => {
       date,
       location,
       organizer: organizer._id,
-      attendees,
       category: categoryEvent._id,
-      comments,
     });
 
     const category = await Category.findById(categoryEvent);
