@@ -165,21 +165,19 @@ exports.updateUserByEmailAndToken = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = await User.findById(decoded.id);
+    const userId = decoded.id;
 
     const { email } = req.params;
-    const { name, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { name } = req.body;
 
     const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
-    } else if (userId._id.toString() !== user._id.toString()) {
+    } else if (user._id != userId) {
       return res.status(401).json({ error: "Unauthorized" });
     } else {
       user.name = name;
-      user.password = hashedPassword;
       await user.save();
     }
 
