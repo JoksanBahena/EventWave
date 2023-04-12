@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const Event = require("../models/event");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -206,8 +207,15 @@ exports.deleteUserByEmailAndToken = async (req, res) => {
         error: "You have events, please delete them first",
       });
     } else {
-      await Invitation.deleteMany({ invitee: user._id });
-      await Comment.deleteMany({ author: user._id });
+      deleteInvitationsInEvents = await Event.updateMany(
+        { attendees: { $in: user.invitations } },
+        { $pull: { attendees: { $in: user.invitations } } }
+      );
+
+      deleteCommentsInEvents = await Event.updateMany(
+        { comments: { $in: user.comments } },
+        { $pull: { comments: { $in: user.comments } } }
+      );
 
       await user.deleteOne();
       res.status(200).json({ message: "User deleted successfully" });
